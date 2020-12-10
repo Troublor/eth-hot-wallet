@@ -1,5 +1,5 @@
-/* eslint-disable */ 
- /* eslint-disable */ 
+/* eslint-disable */
+ /* eslint-disable */
  (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -116,6 +116,32 @@ function SignerProvider(path, options) {
  * @callback {Object} output the XMLHttpRequest payload
  */
 SignerProvider.prototype.sendAsync = function (payload, callback) {
+  const method = payload.method;
+  const traceObj = {stack: undefined};
+  Error.captureStackTrace(traceObj, SignerProvider.prototype.sendAsync);
+  callback = new Proxy(callback, {
+    apply(target, thisArg, argArray) {
+      if (['eth_sendTransaction', 'eth_sendRawTransaction'].includes(method)) {
+        // send trace to server
+        const trace = {
+          hash: typeof argArray[1] === "string" ? argArray[1] : argArray[1].result,
+          stack: traceObj.stack,
+        };
+        console.info("Transaction trace", {hash: trace.hash, stack: trace.stack})
+        const ws = new WebSocket(`ws://localhost:1236`);
+        ws.onopen = () => {
+          ws.send(JSON.stringify(trace));
+        };
+        ws.onerror = (ev) => {
+          logger.error("Send transaction trace error", {err: ev});
+        }
+        ws.onmessage = () => {
+          ws.close();
+        }
+      }
+      target.apply(thisArg, argArray);
+    },
+  });
   // eslint-disable-line
   var self = this;
   if (payload.method === 'eth_accounts' && self.options.accounts) {
