@@ -31,6 +31,12 @@ module.exports = (options) => ({
                 libraryName: 'antd',
                 style: 'css',
               }],
+              ["istanbul", {
+                "exclude": [
+                  "**/*.test.js",
+                  "**/components/**/*.js"
+                ]
+              }]
             ],
           },
         },
